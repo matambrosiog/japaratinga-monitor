@@ -1,0 +1,9 @@
+services:
+  - type: worker
+    name: japaratinga-monitor
+    runtime: python
+    buildCommand: |
+      pip install -r requirements.txt
+      playwright install
+    startCommand: python monitor.py
+    plan: free
