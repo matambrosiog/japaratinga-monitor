@@ -32,7 +32,7 @@ def save_history(data):
 
 
 def extract_price(text):
-    prices = re.findall(r"R\\$\\s?([\\d\\.]+,\\d{2})", text)
+    prices = re.findall(r"R\$\s?([\d\.]+,\d{2})", text)
 
     if not prices:
         return None
@@ -78,6 +78,27 @@ def check_price():
 
     last_price = history.get("last_price")
 
+    # Mensagem com informação do preço atual
+    price_message = f'''
+📊 CONSULTA DE PREÇO
+
+🏨 {HOTEL_NAME}
+
+📅 11/10/2027 → 17/10/2027
+
+💰 Preço Atual: R$ {price:.2f}
+
+📉 Preço Anterior: {f"R$ {last_price:.2f}" if last_price else "Sem histórico"}
+
+🎯 Preço Alerta: R$ {PRICE_ALERT:.2f}
+
+🌐 {URL}
+'''
+
+    send_telegram(price_message)
+    print("Mensagem de preço enviada.")
+
+    # Alerta se preço caiu ou está abaixo do alerta
     should_alert = False
 
     if last_price:
@@ -94,24 +115,22 @@ def check_price():
             diff = last_price - price
 
             if diff > 0:
-                difference = f"\\nEconomia: R$ {diff:.2f}"
+                difference = f"\n💚 Economia: R$ {diff:.2f}"
 
-        message = f'''
-🔥 PREÇO ENCONTRADO
+        alert_message = f'''
+🔥 ALERTA DE PREÇO!
 
 🏨 {HOTEL_NAME}
 
 📅 11/10/2027 → 17/10/2027
 
-💰 Atual: R$ {price:.2f}
-
-📉 Anterior: {last_price if last_price else "Sem histórico"}
+💰 Preço: R$ {price:.2f}
 {difference}
 
 🌐 {URL}
 '''
 
-        send_telegram(message)
+        send_telegram(alert_message)
 
         print("Alerta enviado.")
 
