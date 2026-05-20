@@ -1,130 +1,124 @@
 import os
 import re
-import sqlite3
-import time
-import schedule
+import json
+import requests
 
-from dotenv import load_dotenv
 from telegram import Bot
 from playwright.sync_api import sync_playwright
-
-load_dotenv()
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 PRICE_ALERT = float(os.getenv("PRICE_ALERT", 8000))
 
+URL = "https://www.japaratingaresort.com.br/"
+HOTEL_NAME = "Japaratinga Lounge Resort"
+
 bot = Bot(token=TOKEN)
 
-DB_NAME = "prices.db"
-
-CHECKIN = "11/10/2027"
-CHECKOUT = "17/10/2027"
-
-HOTEL_NAME = "Japaratinga Lounge Resort"
-URL = "https://www.japaratingaresort.com.br/"
+HISTORY_FILE = "prices.json"
 
 
-def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
+def load_history():
+    if not os.path.exists(HISTORY_FILE):
+        return {}
 
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS prices (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT,
-            price REAL
-        )
-        """
-    )
-
-    conn.commit()
-    conn.close()
+    with open(HISTORY_FILE, "r") as f:
+        return json.load(f)
 
 
-
-def save_price(price):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "INSERT INTO prices (date, price) VALUES (datetime('now'), ?)",
-        (price,),
-    )
-
-    conn.commit()
-    conn.close()
+def save_history(data):
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(data, f)
 
 
+def extract_price(text):
+    prices = re.findall(r"R\\$\\s?([\\d\\.]+,\\d{2})", text)
 
-def get_last_price():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
+    if not prices:
+        return None
 
-    cursor.execute(
-        "SELECT price FROM prices ORDER BY id DESC LIMIT 1"
-    )
+    values = []
 
-    result = cursor.fetchone()
-    conn.close()
+    for p in prices:
+        value = p.replace(".", "").replace(",", ".")
+        values.append(float(value))
 
-    return result[0] if result else None
+    return min(values)
 
 
 def send_telegram(message):
-    try:
-        bot.send_message(chat_id=CHAT_ID, text=message)
-    except Exception as e:
-        print(f"Erro ao enviar mensagem: {e}")
+    bot.send_message(chat_id=CHAT_ID, text=message)
 
 
 def check_price():
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
-            page.goto(URL)
+    print("Verificando preço...")
 
-            page.fill('input[placeholder="Check-in"]', CHECKIN)
-            page.fill('input[placeholder="Check-out"]', CHECKOUT)
-            page.click('button:has-text("Buscar")')
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
 
-            page.wait_for_selector(".preco", timeout=10000)
+        page = browser.new_page()
 
-            price_text = page.locator(".preco").first.text_content()
-            price = float(re.sub(r"[^\d,]", "", price_text).replace(",", "."))
+        page.goto(URL, timeout=120000)
 
-            browser.close()
+        page.wait_for_timeout(10000)
 
-            print(f"Preço encontrado: R$ {price}")
-            save_price(price)
+        content = page.content()
 
-            last_price = get_last_price()
-            if last_price and last_price < PRICE_ALERT:
-                message = f"🚨 Alerta de preço!\n{HOTEL_NAME}\nPreço: R$ {price}\nData: Check-in {CHECKIN} - Check-out {CHECKOUT}"
-                send_telegram(message)
+        browser.close()
 
-                print("Alerta enviado.")
+    price = extract_price(content)
 
-            else:
-                print("Nenhuma queda relevante.")
+    if not price:
+        print("Preço não encontrado.")
+        return
 
-    except Exception as e:
-        print(f"Erro ao verificar preço: {e}")
-        error_message = f"❌ Erro no monitor:\n{str(e)}"
-        send_telegram(error_message)
+    print(f"Preço encontrado: R$ {price}")
+
+    history = load_history()
+
+    last_price = history.get("last_price")
+
+    should_alert = False
+
+    if last_price:
+        if price < last_price:
+            should_alert = True
+
+    if price <= PRICE_ALERT:
+        should_alert = True
+
+    if should_alert:
+        difference = ""
+
+        if last_price:
+            diff = last_price - price
+
+            if diff > 0:
+                difference = f"\\nEconomia: R$ {diff:.2f}"
+
+        message = f'''
+🔥 PREÇO ENCONTRADO
+
+🏨 {HOTEL_NAME}
+
+📅 11/10/2027 → 17/10/2027
+
+💰 Atual: R$ {price:.2f}
+
+📉 Anterior: {last_price if last_price else "Sem histórico"}
+{difference}
+
+🌐 {URL}
+'''
+
+        send_telegram(message)
+
+        print("Alerta enviado.")
+
+    history["last_price"] = price
+
+    save_history(history)
 
 
 if __name__ == "__main__":
-    init_db()
-
     check_price()
-
-    schedule.every(6).hours.do(check_price)
-
-    print("Monitor iniciado...")
-
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
