@@ -7,11 +7,13 @@ from selenium.webdriver.chrome.service import Service
 import requests
 import time
 import re
+import os
 
 URL = "SEU_LINK_DA_OMNIBEES"
 
-TELEGRAM_TOKEN = "TOKEN"
-CHAT_ID = "CHAT_ID"
+
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 options = Options()
 options.add_argument("--headless")
