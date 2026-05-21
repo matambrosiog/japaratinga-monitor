@@ -1,4 +1,5 @@
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -29,26 +30,57 @@ print("Abrindo página...")
 
 driver.get(URL)
 
+# espera carregar os quartos/preços
 time.sleep(15)
 
-html = driver.page_source
+print("Capturando preços...")
+
+# pega todos os elementos contendo R$
+elementos = driver.find_elements(By.XPATH, "//*[contains(text(),'R$')]")
+
+valores = []
+
+for elemento in elementos:
+
+    texto = elemento.text.strip()
+
+    print(texto)
+
+    match = re.search(r'R\$\s?([\d\.]+,\d{2})', texto)
+
+    if match:
+
+        valor_str = match.group(1)
+
+        valor_float = float(
+            valor_str.replace('.', '').replace(',', '.')
+        )
+
+        # ignora valores pequenos/filtros laterais
+        if valor_float > 10000:
+            valores.append(valor_float)
 
 driver.quit()
 
-print("Página carregada")
+print("Valores encontrados:")
+print(valores)
 
-precos = re.findall(r'R\$\s?[\d\.]+,\d{2}', html)
+if valores:
 
-print(precos)
+    menor = min(valores)
 
-if precos:
-    menor_preco = precos[0]
+    valor_formatado = f"R$ {menor:,.2f}" \
+        .replace(",", "X") \
+        .replace(".", ",") \
+        .replace("X", ".")
 
     mensagem = f"""
 🏨 Japaratinga Monitor
 
-💰 Preço encontrado:
-{menor_preco}
+💰 Menor preço encontrado:
+{valor_formatado}
+
+📅 11/10/2027 → 17/10/2027
 
 🔗 {URL}
 """
@@ -61,7 +93,17 @@ if precos:
         }
     )
 
+    print("Mensagem enviada!")
     print(response.text)
 
 else:
-    print("Nenhum preço encontrado")
+
+    print("Nenhum preço válido encontrado")
+
+    requests.post(
+        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+        data={
+            "chat_id": CHAT_ID,
+            "text": "⚠️ Nenhum preço encontrado no monitor do Japaratinga."
+        }
+    )
