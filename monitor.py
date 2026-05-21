@@ -98,7 +98,7 @@ if valores:
 R$ {valor_formatado}
 """
 
-else:
+    else:
 
     mensagem = f"""R$ {valor_formatado}
 🏨 Japaratinga Monitor
