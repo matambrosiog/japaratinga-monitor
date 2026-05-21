@@ -2,12 +2,12 @@ name: Monitor Resort
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '0 */6 * * *'
 
   workflow_dispatch:
 
 jobs:
-  run-monitor:
+  monitor:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,10 +19,12 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
+
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          playwright install chromium
 
       - name: Run monitor
         env:
@@ -30,10 +32,3 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PRICE_ALERT: ${{ secrets.PRICE_ALERT }}
         run: python monitor.py
-
-       - name: Upload debug HTML
-      if: always()
-      uses: actions/upload-artifact@v3
-      with:
-        name: debug-html
-        path: page_debug.html
