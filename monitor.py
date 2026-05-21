@@ -1,11 +1,9 @@
 import os
 import re
 import json
-import requests
 
 from telegram import Bot
 from playwright.sync_api import sync_playwright
-from bs4 import BeautifulSoup
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -33,44 +31,43 @@ def save_history(data):
 
 
 def extract_price(html_content):
-    """Extrai o preço usando BeautifulSoup"""
+    """Extrai o preço usando regex no HTML"""
     try:
-        soup = BeautifulSoup(html_content, 'html.parser')
+        # Padrão para encontrar preços como "R$ 16.794,02"
+        # Captura o padrão de forma mais flexível
+        pattern = r'R\$\s*[\d\s]*?(\d+\.\d+,\d{2})'
         
-        # Procura por texto contendo "R$" seguido de número
-        # Padrão: R$ XX.XXX,XX
-        patterns = [
-            r"R\$\s([\d\.]+,\d{2})",
-        ]
+        matches = re.findall(pattern, html_content)
         
-        prices = []
-        
-        # Primeiro tenta encontrar em tags específicas
-        for tag in soup.find_all(text=True):
-            text = tag.strip()
-            if "R$" in text:
-                for pattern in patterns:
-                    matches = re.findall(pattern, text)
-                    if matches:
-                        for match in matches:
-                            # Converte "16.794,02" em float
-                            value_str = match.replace(".", "").replace(",", ".")
-                            try:
-                                prices.append(float(value_str))
-                            except:
-                                pass
-        
-        if prices:
-            # Remove preços muito altos (provavelmente são totalizadores)
-            prices = [p for p in prices if p < 100000]
+        if matches:
+            print(f"✓ Padrão encontrado: {pattern}")
+            print(f"✓ Preços encontrados: {matches}")
+            
+            prices = []
+            for match in matches:
+                # Converte "16.794,02" em float
+                value_str = match.replace(".", "").replace(",", ".")
+                try:
+                    prices.append(float(value_str))
+                except Exception as e:
+                    print(f"Erro ao converter {match}: {e}")
+                    continue
             
             if prices:
-                min_price = min(prices)
-                print(f"✓ Preço extraído com sucesso: R$ {min_price:.2f}")
-                print(f"✓ Todos os preços encontrados: {prices}")
-                return min_price
+                # Remove preços muito altos (provavelmente são totalizadores)
+                prices = [p for p in prices if p < 100000]
+                
+                if prices:
+                    min_price = min(prices)
+                    print(f"✓ Preço extraído com sucesso: R$ {min_price:.2f}")
+                    return min_price
         
-        print("✗ Nenhum preço encontrado")
+        # Se não encontrar, mostra um trecho do HTML para debug
+        print("✗ Nenhum preço encontrado com o padrão esperado")
+        print("\n=== PRIMEIROS 3000 CARACTERES DO HTML ===")
+        print(html_content[:3000])
+        print("\n=== FIM DO TRECHO ===\n")
+        
         return None
         
     except Exception as e:
@@ -87,15 +84,19 @@ def check_price():
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-
         page = browser.new_page()
+        
+        # Define user agent para parecer um navegador normal
+        page.set_extra_http_headers({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
 
-        page.goto(URL, timeout=120000)
-
-        page.wait_for_timeout(10000)
-
+        page.goto(URL, timeout=120000, wait_until='networkidle')
+        
+        # Aguarda mais tempo para garantir que o conteúdo foi carregado
+        page.wait_for_timeout(15000)
+        
         content = page.content()
-
         browser.close()
 
     price = extract_price(content)
@@ -107,7 +108,6 @@ def check_price():
     print(f"✓ Preço encontrado: R$ {price:.2f}")
 
     history = load_history()
-
     last_price = history.get("last_price")
 
     # Mensagem com informação do preço atual
@@ -163,11 +163,9 @@ def check_price():
 '''
 
         send_telegram(alert_message)
-
         print("✓ Alerta enviado.")
 
     history["last_price"] = price
-
     save_history(history)
 
 
