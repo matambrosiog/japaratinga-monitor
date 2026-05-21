@@ -5,6 +5,7 @@ import requests
 
 from telegram import Bot
 from playwright.sync_api import sync_playwright
+from bs4 import BeautifulSoup
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -31,39 +32,50 @@ def save_history(data):
         json.dump(data, f)
 
 
-def extract_price(text):
-    # Tenta múltiplos padrões de regex
-    patterns = [
-        r"R\$\s?([\d\.]+,\d{2})",  # R$ 16.794,02
-        r"R\$\s*(\d+[.,]\d+[.,]\d+)",  # Variações com pontos e vírgulas
-        r"(\d+\.\d+,\d{2})",  # 16.794,02
-    ]
-    
-    for pattern in patterns:
-        prices = re.findall(pattern, text)
+def extract_price(html_content):
+    """Extrai o preço usando BeautifulSoup"""
+    try:
+        soup = BeautifulSoup(html_content, 'html.parser')
+        
+        # Procura por texto contendo "R$" seguido de número
+        # Padrão: R$ XX.XXX,XX
+        patterns = [
+            r"R\$\s([\d\.]+,\d{2})",
+        ]
+        
+        prices = []
+        
+        # Primeiro tenta encontrar em tags específicas
+        for tag in soup.find_all(text=True):
+            text = tag.strip()
+            if "R$" in text:
+                for pattern in patterns:
+                    matches = re.findall(pattern, text)
+                    if matches:
+                        for match in matches:
+                            # Converte "16.794,02" em float
+                            value_str = match.replace(".", "").replace(",", ".")
+                            try:
+                                prices.append(float(value_str))
+                            except:
+                                pass
+        
         if prices:
-            print(f"✓ Padrão encontrado: {pattern}")
-            print(f"✓ Preços encontrados: {prices}")
+            # Remove preços muito altos (provavelmente são totalizadores)
+            prices = [p for p in prices if p < 100000]
             
-            values = []
-            for p in prices:
-                value = p.replace(".", "").replace(",", ".")
-                try:
-                    values.append(float(value))
-                except:
-                    continue
-            
-            if values:
-                return min(values)
-    
-    print("✗ Nenhum padrão de preço encontrado")
-    
-    # Debug: mostra um trecho do HTML
-    print("\n=== PRIMEIROS 2000 CARACTERES DO HTML ===")
-    print(text[:2000])
-    print("\n=== FIM DO TRECHO ===\n")
-    
-    return None
+            if prices:
+                min_price = min(prices)
+                print(f"✓ Preço extraído com sucesso: R$ {min_price:.2f}")
+                print(f"✓ Todos os preços encontrados: {prices}")
+                return min_price
+        
+        print("✗ Nenhum preço encontrado")
+        return None
+        
+    except Exception as e:
+        print(f"✗ Erro ao extrair preço: {e}")
+        return None
 
 
 def send_telegram(message):
@@ -92,7 +104,7 @@ def check_price():
         print("Preço não encontrado.")
         return
 
-    print(f"Preço encontrado: R$ {price}")
+    print(f"✓ Preço encontrado: R$ {price:.2f}")
 
     history = load_history()
 
@@ -116,7 +128,7 @@ def check_price():
 '''
 
     send_telegram(price_message)
-    print("Mensagem de preço enviada.")
+    print("✓ Mensagem de preço enviada.")
 
     # Alerta se preço caiu ou está abaixo do alerta
     should_alert = False
@@ -152,7 +164,7 @@ def check_price():
 
         send_telegram(alert_message)
 
-        print("Alerta enviado.")
+        print("✓ Alerta enviado.")
 
     history["last_price"] = price
 
