@@ -35,7 +35,8 @@ def save_history(data):
 
 
 def extract_price(text):
-    prices = re.findall(r"R\\$\\s?([\\d\\.]+,\\d{2})", text)
+
+    prices = re.findall(r"R\\$\\s?[\\d\\.]+,\\d{2}", text)
 
     if not prices:
         return None
@@ -43,8 +44,21 @@ def extract_price(text):
     values = []
 
     for p in prices:
-        value = p.replace(".", "").replace(",", ".")
-        values.append(float(value))
+
+        clean = (
+            p.replace("R$", "")
+            .replace(".", "")
+            .replace(",", ".")
+            .strip()
+        )
+
+        try:
+            values.append(float(clean))
+        except:
+            pass
+
+    if not values:
+        return None
 
     return min(values)
 
@@ -68,11 +82,11 @@ def check_price():
 
     driver.get(URL)
 
-    time.sleep(10)
+    time.sleep(20)
 
-    page_text = driver.page_source
+    page_text = driver.find_element(By.TAG_NAME, "body").text
 
-    driver.quit()
+    driver.save_screenshot("debug.png")
 
     price = extract_price(page_text)
 
