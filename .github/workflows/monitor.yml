@@ -30,3 +30,10 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PRICE_ALERT: ${{ secrets.PRICE_ALERT }}
         run: python monitor.py
+
+       - name: Upload debug HTML
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: debug-html
+        path: page_debug.html
