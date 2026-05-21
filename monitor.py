@@ -1,3 +1,18 @@
+from telegram import Bot
+import os
+
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
+bot = Bot(token=TOKEN)
+
+bot.send_message(
+    chat_id=CHAT_ID,
+    text="Teste Telegram funcionando 🚀"
+)
+
+print("Mensagem enviada.")
+
 import os
 import re
 import json
