@@ -100,7 +100,7 @@ R$ {valor_formatado}
 
 else:
 
-    mensagem = f"R$ {valor_formatado}"
+    mensagem = f"""R$ {valor_formatado}
 🏨 Japaratinga Monitor
 
 💰 Menor preço encontrado:
