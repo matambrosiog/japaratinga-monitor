@@ -32,18 +32,32 @@ def save_history(data):
 
 
 def extract_price(text):
-    prices = re.findall(r"R\$\s?([\d\.]+,\d{2})", text)
-
-    if not prices:
-        return None
-
-    values = []
-
-    for p in prices:
-        value = p.replace(".", "").replace(",", ".")
-        values.append(float(value))
-
-    return min(values)
+    # Tenta múltiplos padrões de regex
+    patterns = [
+        r"R\$\s?([\d\.]+,\d{2})",  # R$ 16.794,02
+        r"R\$\s*(\d+[.,]\d+[.,]\d+)",  # Variações com pontos e vírgulas
+        r"(\d+\.\d+,\d{2})",  # 16.794,02
+    ]
+    
+    for pattern in patterns:
+        prices = re.findall(pattern, text)
+        if prices:
+            print(f"Padrão encontrado: {pattern}")
+            print(f"Preços encontrados: {prices}")
+            
+            values = []
+            for p in prices:
+                value = p.replace(".", "").replace(",", ".")
+                try:
+                    values.append(float(value))
+                except:
+                    continue
+            
+            if values:
+                return min(values)
+    
+    print("Nenhum padrão de preço encontrado")
+    return None
 
 
 def send_telegram(message):
@@ -63,6 +77,10 @@ def check_price():
         page.wait_for_timeout(10000)
 
         content = page.content()
+        
+        # Debug: salva o HTML para análise
+        with open("page_debug.html", "w") as f:
+            f.write(content)
 
         browser.close()
 
