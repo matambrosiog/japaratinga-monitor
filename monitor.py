@@ -96,9 +96,9 @@ if valores:
 💰 Menor preço encontrado:
 R$ {valor_formatado}
 
-📅 11/10/2027 → 17/10/2027
+# 📅 11/10/2027 → 17/10/2027
 
-🔗 {URL}
+# 🔗 {URL}
 """
 
     response = requests.post(
