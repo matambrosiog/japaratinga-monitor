@@ -93,7 +93,8 @@ if valores:
     if menor < 16000:
 
         mensagem = f"""
-🚨 BAIXOU O PREÇO! 🚨
+🚨🚨🚨 BAIXOU O PREÇO! 🚨🚨🚨
+🏨 Japaratinga Monitor
 R$ {valor_formatado}
 """
 
@@ -109,6 +110,7 @@ R$ {valor_formatado}
     else:
 
         mensagem = f"""
+🏨 Japaratinga Monitor
 💰 Menor preço encontrado:
 R$ {valor_formatado}
 
