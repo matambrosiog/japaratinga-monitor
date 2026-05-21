@@ -90,15 +90,22 @@ if valores:
         .replace(".", ",") \
         .replace("X", ".")
 
+    if menor < 16000:
+
     mensagem = f"""
+🚨 BAIXOU O PREÇO! 🚨
+
+R$ {valor_formatado}
+"""
+
+else:
+
+    mensagem = f"R$ {valor_formatado}"
 🏨 Japaratinga Monitor
 
 💰 Menor preço encontrado:
 R$ {valor_formatado}
 
-# 📅 11/10/2027 → 17/10/2027
-
-# 🔗 {URL}
 """
 
     response = requests.post(
