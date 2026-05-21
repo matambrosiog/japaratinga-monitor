@@ -94,15 +94,21 @@ if valores:
 
         mensagem = f"""
 🚨 BAIXOU O PREÇO! 🚨
-
 R$ {valor_formatado}
 """
 
+        requests.post(
+        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+        data={
+            "chat_id": CHAT_ID,
+            "text": mensagem,
+            "disable_notification": False
+        }
+    )
+
     else:
 
-        mensagem = f"""R$ {valor_formatado}
-🏨 Japaratinga Monitor
-
+        mensagem = f"""
 💰 Menor preço encontrado:
 R$ {valor_formatado}
 
@@ -112,7 +118,8 @@ R$ {valor_formatado}
         f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
         data={
             "chat_id": CHAT_ID,
-            "text": mensagem
+            "text": mensagem,
+            "disable_notification": True
         }
     )
 
