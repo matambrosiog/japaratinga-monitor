@@ -8,9 +8,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 import requests
-import re
 import os
 import time
+import re
 
 URL = "https://book.omnibees.com/hotelresults?c=5173&q=8259&currencyId=16&lang=pt-BR&hotel_folder=&NRooms=1&age=&group_code=&Code=&loyalty_code=&ag=&submited=false&CheckIn=11102027&CheckOut=17102027&CheckIn_formated=11%2F10%2F2027&CheckIn_formated_submit=11%2F10%2F27&CheckOut_formated=17%2F10%2F2027&CheckOut_formated_submit=17%2F10%2F27&ad=2&ch=0&ag1=1&ag2=1"
 
@@ -19,10 +19,12 @@ CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 options = Options()
 
+# importante:
 options.add_argument("--headless=new")
+options.add_argument("--window-size=1920,1080")
+options.add_argument("--disable-blink-features=AutomationControlled")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
-options.add_argument("--window-size=1920,1080")
 
 driver = webdriver.Chrome(
     service=Service(ChromeDriverManager().install()),
@@ -33,42 +35,50 @@ print("Abrindo página...")
 
 driver.get(URL)
 
-wait = WebDriverWait(driver, 40)
+wait = WebDriverWait(driver, 60)
 
-# espera os preços aparecerem
-wait.until(
-    EC.presence_of_element_located(
-        (By.XPATH, "//*[contains(text(),'R$')]")
-    )
-)
+time.sleep(20)
 
-print("Página carregada!")
+print("Tentando localizar preços...")
 
-# espera extra para renderização completa
-time.sleep(8)
-
-texto = driver.find_element(By.TAG_NAME, "body").text
-
-driver.quit()
-
-print(texto)
-
-# pega somente preços grandes (diárias totais)
-matches = re.findall(r'R\$\s?([\d\.]+,\d{2})', texto)
+# pega TODOS os elementos da página
+elementos = driver.find_elements(By.XPATH, "//*")
 
 valores = []
 
-for valor in matches:
+for el in elementos:
 
-    numero = float(
-        valor.replace(".", "").replace(",", ".")
-    )
+    try:
+        texto = el.text.strip()
 
-    # ignora preços do filtro lateral
-    if numero > 10000:
-        valores.append(numero)
+        # queremos apenas preços completos tipo:
+        # R$ 16.794,02
+        match = re.search(r'R\$\s?(\d{1,3}(?:\.\d{3})*,\d{2})', texto)
 
-print("Valores encontrados:")
+        if match:
+
+            valor_str = match.group(1)
+
+            valor_float = float(
+                valor_str.replace(".", "").replace(",", ".")
+            )
+
+            # ignora preços pequenos do filtro lateral
+            if valor_float > 10000:
+
+                valores.append(valor_float)
+
+                print(f"Preço encontrado: {valor_float}")
+
+    except:
+        pass
+
+driver.quit()
+
+# remove duplicados
+valores = list(set(valores))
+
+print("Lista final:")
 print(valores)
 
 if valores:
@@ -87,6 +97,8 @@ if valores:
 R$ {valor_formatado}
 
 📅 11/10/2027 → 17/10/2027
+
+🔗 {URL}
 """
 
     response = requests.post(
@@ -107,6 +119,6 @@ else:
         f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
         data={
             "chat_id": CHAT_ID,
-            "text": "⚠️ Nenhum preço encontrado."
+            "text": "⚠️ Nenhum preço encontrado no Japaratinga."
         }
     )
