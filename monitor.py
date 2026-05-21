@@ -42,8 +42,8 @@ def extract_price(text):
     for pattern in patterns:
         prices = re.findall(pattern, text)
         if prices:
-            print(f"Padrão encontrado: {pattern}")
-            print(f"Preços encontrados: {prices}")
+            print(f"✓ Padrão encontrado: {pattern}")
+            print(f"✓ Preços encontrados: {prices}")
             
             values = []
             for p in prices:
@@ -56,7 +56,13 @@ def extract_price(text):
             if values:
                 return min(values)
     
-    print("Nenhum padrão de preço encontrado")
+    print("✗ Nenhum padrão de preço encontrado")
+    
+    # Debug: mostra um trecho do HTML
+    print("\n=== PRIMEIROS 2000 CARACTERES DO HTML ===")
+    print(text[:2000])
+    print("\n=== FIM DO TRECHO ===\n")
+    
     return None
 
 
@@ -77,10 +83,6 @@ def check_price():
         page.wait_for_timeout(10000)
 
         content = page.content()
-        
-        # Debug: salva o HTML para análise
-        with open("page_debug.html", "w") as f:
-            f.write(content)
 
         browser.close()
 
