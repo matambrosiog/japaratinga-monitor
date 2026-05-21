@@ -1,10 +1,10 @@
 name: Monitor Resort
 
 on:
+  workflow_dispatch:
+
   schedule:
     - cron: '0 */6 * * *'
-
-  workflow_dispatch:
 
 jobs:
   monitor:
@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Chrome
+      - name: Install Google Chrome
         uses: browser-actions/setup-chrome@v1
 
       - name: Install dependencies
@@ -32,3 +32,9 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PRICE_ALERT: ${{ secrets.PRICE_ALERT }}
         run: python monitor.py
+
+      - name: Upload screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshot
+          path: debug.png
