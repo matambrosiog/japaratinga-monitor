@@ -13,7 +13,7 @@ TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 PRICE_ALERT = float(os.getenv("PRICE_ALERT", 8000))
 
-URL = "https://www.japaratingaresort.com.br/"
+URL = "https://book.omnibees.com/hotelresults?c=5173&q=8259&currencyId=16&lang=pt-BR&hotel_folder=&NRooms=1&age=&group_code=&Code=&loyalty_code=&ag=&submited=false&CheckIn=11102027&CheckOut=17102027&CheckIn_formated=11%2F10%2F2027&CheckIn_formated_submit=11%2F10%2F27&CheckOut_formated=17%2F10%2F2027&CheckOut_formated_submit=17%2F10%2F27&ad=2&ch=0&ag1=1&ag2=1&_gl=1*4zpr4l*_gcl_au*MTQwNDg0NTY4NC4xNzc5MzIyMDEw*_ga*MjAwNzAxNzY3LjE3NzkzMjIwMTE.*_ga_H3RJ7JE8EV*czE3NzkzMjIwMTEkbzEkZzEkdDE3NzkzMjIwNTAkajMwJGwwJGgxMDE3ODI2MDY3"
 HOTEL_NAME = "Japaratinga Lounge Resort"
 
 bot = Bot(token=TOKEN)
